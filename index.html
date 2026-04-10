@@ -39,13 +39,13 @@
 
         [v-cloak] { display: none; }
 
-        /* 月曆單元格固定比例 */
+        /* 月曆單元格固定比例 - 已拉長 */
         .calendar-grid {
             display: grid;
             grid-template-columns: repeat(7, 1fr);
         }
         .calendar-day {
-            aspect-ratio: 1 / 1.1;
+            aspect-ratio: 1 / 1.4;
         }
     </style>
 </head>
@@ -163,27 +163,42 @@
                     <i data-lucide="calendar" class="w-5 h-5"></i> 月曆手札
                 </h3>
                 <div class="bg-white rounded-[2rem] p-4 shadow-sm border border-stone-100">
+                    <!-- 星期表頭 -->
                     <div class="grid grid-cols-7 mb-2 border-b border-stone-50">
                         <div v-for="day in ['日', '一', '二', '三', '四', '五', '六']" :key="day" class="py-2 text-center text-[10px] font-bold text-stone-400 uppercase tracking-widest">
                             {{ day }}
                         </div>
                     </div>
+                    <!-- 日期格網 -->
                     <div class="calendar-grid">
                         <div v-for="empty in calendarData.emptySlots" :key="'empty-'+empty" class="calendar-day"></div>
                         <div v-for="dayObj in calendarData.days" :key="dayObj.dateString" 
                             @click="selectDate(dayObj.dateString)"
-                            class="calendar-day border border-stone-50/50 p-1 flex flex-col justify-between cursor-pointer hover:bg-stone-50 transition-colors group relative overflow-hidden">
-                            <span class="text-[10px] font-bold" :class="dayObj.isToday ? 'text-stone-800 bg-stone-100 px-1 rounded' : 'text-stone-300'">
+                            class="calendar-day border border-stone-50/50 flex flex-col relative cursor-pointer hover:bg-stone-50 transition-colors group overflow-hidden">
+                            
+                            <!-- 日期數字放在左上角 -->
+                            <span class="text-[9px] font-bold p-1 z-10" :class="dayObj.isToday ? 'text-stone-800 bg-stone-100 rounded-br-lg' : 'text-stone-300'">
                                 {{ dayObj.day }}
                             </span>
-                            <div class="flex flex-col items-end gap-[1px]">
-                                <span v-if="dayObj.income > 0" class="text-[7px] font-bold text-emerald-500 leading-none">+{{ dayObj.income.toLocaleString() }}</span>
-                                <span v-if="dayObj.expense > 0" class="text-[7px] font-bold text-rose-400 leading-none">-{{ dayObj.expense.toLocaleString() }}</span>
+                            
+                            <!-- 收支金額垂直水平置中 -->
+                            <div class="flex-1 flex flex-col items-center justify-center gap-[1px] -mt-2 px-1">
+                                <span v-if="dayObj.income > 0" 
+                                    class="text-[2.2vw] min-[450px]:text-[9px] font-bold text-emerald-500 leading-none text-center">
+                                    +{{ dayObj.income.toLocaleString() }}
+                                </span>
+                                <span v-if="dayObj.expense > 0" 
+                                    class="text-[2.2vw] min-[450px]:text-[9px] font-bold text-rose-400 leading-none text-center">
+                                    -{{ dayObj.expense.toLocaleString() }}
+                                </span>
                             </div>
-                            <div v-if="dayObj.income > 0 || dayObj.expense > 0" class="absolute top-1 right-1 w-1 h-1 bg-stone-200 rounded-full"></div>
+                            
+                            <!-- 有紀錄的小提示圓點 -->
+                            <div v-if="dayObj.income > 0 || dayObj.expense > 0" class="absolute top-1.5 right-1.5 w-1 h-1 bg-stone-200 rounded-full"></div>
                         </div>
                     </div>
                 </div>
+                <p class="text-center text-[10px] text-stone-400 italic">點擊日期可查看該日詳細帳目</p>
             </div>
 
             <!-- 3. 明細清單 -->
@@ -276,7 +291,7 @@
             </div>
         </main>
 
-        <!-- 表單彈出層 -->
+        <!-- 表單彈出層 (新增/編輯) -->
         <transition name="fade">
             <div v-if="activeTab === 'add'" class="fixed inset-0 bg-stone-900/10 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-0 sm:p-6">
                 <div class="bg-white w-full max-w-md rounded-t-[2.5rem] sm:rounded-[2.5rem] p-8 shadow-2xl slide-up-enter-active">
@@ -439,7 +454,7 @@
             </div>
         </nav>
 
-        <!-- 背景裝飾 -->
+        <!-- 背景 -->
         <div class="fixed top-20 right-[-10%] w-64 h-64 bg-stone-200/30 rounded-full blur-3xl -z-10"></div>
         <div class="fixed bottom-20 left-[-10%] w-48 h-48 bg-stone-200/30 rounded-full blur-3xl -z-10"></div>
     </div>
@@ -722,7 +737,6 @@
                     } catch (err) { handleFirestoreError(err, "Submit"); }
                 };
 
-                // 刪除流程
                 const requestDelete = (id) => {
                     itemToDeleteId.value = id;
                     isDeleteModalOpen.value = true;
