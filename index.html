@@ -11,8 +11,7 @@
     <style>
         body { font-family: 'Noto Sans TC', sans-serif; -webkit-tap-highlight-color: transparent; overflow-x: hidden; width: 100%; background: #fafaf9; }
         .font-serif { font-family: 'Noto Serif TC', serif; }
-        /* 防止行動裝置輸入框自動放大 */
-        input, select, textarea { font-size: 16px !important; }
+        input, select, textarea, button { font-size: 16px !important; }
         .fade-enter-active, .fade-leave-active { transition: opacity 0.3s ease; }
         .fade-enter-from, .fade-leave-to { opacity: 0; }
         .slide-up-enter-active { transition: all 0.4s ease-out; }
@@ -21,34 +20,35 @@
         .custom-scrollbar::-webkit-scrollbar { width: 4px; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #e7e5e4; border-radius: 10px; }
         [v-cloak] { display: none; }
-        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); }
-        .calendar-day { aspect-ratio: 1 / 1.4; border: 0.5px solid #f5f5f4; }
-        .donut-chart { border-radius: 50%; position: relative; display: flex; align-items: center; justify-content: center; }
-        .donut-hole { 
-            width: 70%; height: 70%; background: white; border-radius: 50%; 
-            display: flex; flex-direction: column; align-items: center; justify-content: center; 
-            box-shadow: inset 0 2px 4px rgba(0,0,0,0.05); 
+        
+        /* 月曆格式核心修正 */
+        .calendar-grid { 
+            display: grid; 
+            grid-template-columns: repeat(7, 1fr); 
+            width: 100%;
         }
+        .calendar-day { 
+            aspect-ratio: 1 / 1.3; 
+            border: 0.5px solid #f5f5f4; 
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .donut-chart { border-radius: 50%; position: relative; display: flex; align-items: center; justify-content: center; }
+        .donut-hole { width: 70%; height: 70%; background: white; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: inset 0 2px 4px rgba(0,0,0,0.05); }
     </style>
 </head>
 <body class="bg-stone-50 text-stone-700">
 
     <div id="app" v-cloak class="min-h-screen relative">
+        <!-- 載入中遮罩 -->
         <div v-if="!isAuthReady" class="fixed inset-0 bg-stone-50 z-[999] flex flex-col items-center justify-center">
             <div class="w-10 h-10 border-4 border-stone-200 border-t-stone-800 rounded-full animate-spin mb-4"></div>
-            <p class="text-xs font-serif text-stone-400">正在翻開手札...</p>
+            <p class="text-xs font-serif text-stone-400">正在整理手札紀錄...</p>
         </div>
 
-        <div v-if="errorMessage" class="fixed top-4 left-1/2 -translate-x-1/2 z-[1000] w-[90%] max-w-xs bg-rose-50 border border-rose-100 text-rose-600 px-6 py-3 rounded-full shadow-lg text-sm flex items-center gap-2">
-            <i data-lucide="alert-circle" class="w-4 h-4 flex-shrink-0"></i>
-            <span class="truncate">{{ errorMessage }}</span>
-            <button @click="errorMessage = ''" class="ml-auto p-1"><i data-lucide="x" class="w-4 h-4"></i></button>
-        </div>
-        <div v-if="successMessage" class="fixed top-4 left-1/2 -translate-x-1/2 z-[1000] w-[90%] max-w-xs bg-emerald-50 border border-emerald-100 text-emerald-600 px-6 py-3 rounded-full shadow-lg text-sm flex items-center gap-2 animate-in fade-in">
-            <i data-lucide="check-circle" class="w-4 h-4 flex-shrink-0"></i>
-            <span class="truncate">{{ successMessage }}</span>
-        </div>
-
+        <!-- 頂部導航 -->
         <header class="max-w-md mx-auto px-6 py-8 flex justify-between items-center">
             <div class="min-w-0">
                 <h1 class="text-2xl font-serif font-bold text-stone-800 tracking-tighter truncate">{{ appTitle }}</h1>
@@ -62,29 +62,25 @@
         </header>
 
         <main class="max-w-md mx-auto px-6 pb-32">
-            <!-- 1. 概覽分頁 (Dashboard) -->
+            
+            <!-- 1. 概覽分頁 -->
             <div v-if="activeTab === 'dashboard'" class="space-y-6">
-                <!-- 年度統計卡片 -->
+                <!-- 年度收支卡片 -->
                 <div class="bg-stone-800 p-8 rounded-[2.5rem] shadow-xl text-stone-50 relative overflow-hidden">
                     <p class="text-[10px] text-stone-400 mb-1 tracking-widest uppercase">{{ currentDate.getFullYear() }} 年度收支結餘</p>
                     <h2 class="text-4xl font-serif font-bold text-emerald-400">${{ yearlyStats.balance.toLocaleString() }}</h2>
                     <div class="grid grid-cols-2 gap-4 mt-8 pt-6 border-t border-stone-700 text-xs">
-                        <div><p class="text-stone-500 mb-1 uppercase tracking-widest">年度收入</p><p class="font-bold text-stone-200">${{ yearlyStats.income.toLocaleString() }}</p></div>
-                        <div><p class="text-stone-500 mb-1 uppercase tracking-widest">年度支出</p><p class="font-bold text-rose-400">${{ yearlyStats.expense.toLocaleString() }}</p></div>
+                        <div><p class="text-stone-500 mb-1">年度收入</p><p class="font-bold text-stone-200 text-sm">${{ yearlyStats.income.toLocaleString() }}</p></div>
+                        <div><p class="text-stone-500 mb-1">年度支出</p><p class="font-bold text-rose-400 text-sm">${{ yearlyStats.expense.toLocaleString() }}</p></div>
                     </div>
                 </div>
 
                 <div class="bg-white p-8 rounded-[2.5rem] shadow-sm border border-stone-100">
-                    <p class="text-xs text-stone-400 mb-1">本月收支結餘</p>
-                    <h2 class="text-4xl font-serif font-bold truncate" :class="monthlyStats.balance >= 0 ? 'text-stone-800' : 'text-rose-600'">${{ monthlyStats.balance.toLocaleString() }}</h2>
+                    <p class="text-xs text-stone-400 mb-1">本月盈餘</p>
+                    <h2 class="text-4xl font-serif font-bold" :class="monthlyStats.balance >= 0 ? 'text-stone-800' : 'text-rose-600'">${{ monthlyStats.balance.toLocaleString() }}</h2>
                 </div>
 
-                <div class="flex justify-between items-center px-2">
-                    <h3 class="text-xs font-bold tracking-widest text-stone-500 uppercase">本月收支流水</h3>
-                    <button @click="activeTab = 'calendar'" class="text-[10px] text-stone-400 underline underline-offset-4">月曆視圖</button>
-                </div>
-
-                <!-- 恢復：明細清單 -->
+                <!-- 明細流水 -->
                 <div class="space-y-6">
                     <div v-for="group in groupedFilteredTransactions" :key="group.date" class="space-y-2">
                         <div class="flex justify-between items-end px-2 border-b border-stone-50 pb-1">
@@ -105,28 +101,31 @@
                             <p class="font-serif font-bold text-sm" :class="t.type === 'expense' ? 'text-stone-700' : 'text-emerald-600'">{{ t.type === 'expense' ? '-' : '+' }}${{ t.amount.toLocaleString() }}</p>
                         </div>
                     </div>
+                    <div v-if="groupedFilteredTransactions.length === 0" class="py-20 text-center text-stone-300 italic text-sm">本月尚未留下任何手札紀錄</div>
                 </div>
             </div>
 
-            <!-- 2. 月曆分頁 (Calendar) -->
+            <!-- 2. 月曆分頁 -->
             <div v-if="activeTab === 'calendar'" class="space-y-6">
-                <h3 class="text-lg font-bold flex items-center gap-2"><i data-lucide="calendar" class="w-5 h-5"></i> 月曆手札</h3>
-                <div class="bg-white rounded-[2rem] p-4 shadow-sm border border-stone-100">
-                    <div class="grid grid-cols-7 mb-2 border-b border-stone-50 text-[10px] font-bold text-stone-400 py-2 text-center uppercase">
+                <div class="bg-white rounded-[2rem] overflow-hidden shadow-sm border border-stone-100">
+                    <div class="grid grid-cols-7 border-b border-stone-50 text-[10px] font-bold text-stone-400 py-3 text-center uppercase tracking-widest">
                         <div v-for="d in ['日','一','二','三','四','五','六']" :key="d">{{d}}</div>
                     </div>
                     <div class="calendar-grid">
-                        <div v-for="empty in calendarData.emptySlots" :key="'empty-'+empty" class="p-2"></div>
-                        <div v-for="dayObj in calendarData.days" :key="dayObj.dateString" @click="selectDate(dayObj.dateString)" class="calendar-day border border-stone-50/50 flex flex-col relative cursor-pointer hover:bg-stone-50 transition-colors group overflow-hidden">
-                            <span class="text-[9px] font-bold p-1 z-10" :class="dayObj.isToday ? 'text-stone-800 bg-stone-100 rounded-br-lg' : 'text-stone-300'">{{ dayObj.day }}</span>
-                            <div class="flex-1 flex flex-col items-center justify-center gap-[1px] px-1 text-center">
-                                <span v-if="dayObj.income > 0" class="text-[2.2vw] min-[450px]:text-[9px] font-bold text-emerald-500 leading-none truncate">+{{ dayObj.income.toLocaleString() }}</span>
-                                <span v-if="dayObj.expense > 0" class="text-[2.2vw] min-[450px]:text-[9px] font-bold text-rose-400 leading-none truncate">-{{ dayObj.expense.toLocaleString() }}</span>
+                        <!-- 空白格子修正 -->
+                        <div v-for="n in calendarData.emptySlots" :key="'empty-'+n" class="calendar-day bg-stone-50/30"></div>
+                        <!-- 日期格子 -->
+                        <div v-for="dayObj in calendarData.days" :key="dayObj.dateString" @click="selectDate(dayObj.dateString)" class="calendar-day cursor-pointer hover:bg-stone-50 transition-colors">
+                            <span class="text-[9px] font-bold p-1" :class="dayObj.isToday ? 'text-white bg-stone-800 rounded-br-lg' : 'text-stone-300'">{{ dayObj.day }}</span>
+                            <div class="flex-1 flex flex-col items-center justify-center gap-[1px] px-1 text-center overflow-hidden">
+                                <span v-if="dayObj.income > 0" class="text-[1.8vw] sm:text-[7px] font-bold text-emerald-500 leading-none truncate">+{{ dayObj.income }}</span>
+                                <span v-if="dayObj.expense > 0" class="text-[1.8vw] sm:text-[7px] font-bold text-rose-400 leading-none truncate">-{{ dayObj.expense }}</span>
                             </div>
                         </div>
                     </div>
                 </div>
 
+                <!-- 支出比例分析 -->
                 <section class="bg-white p-8 rounded-[2.5rem] border border-stone-100 shadow-sm space-y-8">
                     <h3 class="text-[10px] font-bold tracking-[0.2em] text-stone-400 uppercase font-mono text-center">本月支出比例分析</h3>
                     <div class="flex flex-col items-center">
@@ -154,18 +153,11 @@
                 </section>
             </div>
 
-            <!-- 3. 資產分頁 (Assets) -->
+            <!-- 3. 資產分頁 -->
             <div v-if="activeTab === 'assets'" class="space-y-6">
-                <h3 class="text-lg font-bold flex items-center gap-2"><i data-lucide="wallet" class="w-5 h-5"></i> 帳本管理 (淨資產)</h3>
-                <div class="bg-stone-800 p-8 rounded-[2.5rem] shadow-xl text-stone-50 relative overflow-hidden">
-                    <div class="relative z-10">
-                        <p class="text-[10px] text-stone-400 mb-1 tracking-widest uppercase">目前預估淨資產</p>
-                        <h2 class="text-4xl font-serif font-bold text-emerald-400 truncate">${{ netWorthStats.total.toLocaleString() }}</h2>
-                        <div class="grid grid-cols-2 gap-4 mt-8 pt-6 border-t border-stone-700 text-xs text-stone-300">
-                            <div><p class="uppercase tracking-widest mb-1">總資產</p><p class="font-bold text-stone-50 truncate">${{ netWorthStats.assets.toLocaleString() }}</p></div>
-                            <div><p class="uppercase tracking-widest mb-1">總負債</p><p class="font-bold text-rose-400 truncate">${{ netWorthStats.liabilities.toLocaleString() }}</p></div>
-                        </div>
-                    </div>
+                <div class="bg-stone-800 p-8 rounded-[2.5rem] shadow-xl text-stone-50 relative overflow-hidden text-center">
+                    <p class="text-[10px] text-stone-400 mb-1 tracking-widest uppercase">目前預估淨資產</p>
+                    <h2 class="text-4xl font-serif font-bold text-emerald-400">${{ netWorthStats.total.toLocaleString() }}</h2>
                 </div>
 
                 <button @click="openAssetEditModal()" class="w-full bg-white border border-stone-100 py-4 rounded-[2rem] text-sm font-bold text-stone-500 hover:bg-stone-50 transition-all flex items-center justify-center gap-2 shadow-sm active:scale-95">
@@ -173,33 +165,28 @@
                 </button>
 
                 <div class="space-y-3">
-                    <div v-for="a in sortedAssets" :key="a.id" @click="openAssetDetail(a)" class="bg-white p-4 rounded-2xl flex items-center justify-between border border-stone-50 group hover:border-stone-100 shadow-sm cursor-pointer active:scale-[0.98] transition-all">
+                    <div v-for="a in sortedAssets" :key="a.id" @click="openAssetDetail(a)" class="bg-white p-4 rounded-2xl flex items-center justify-between border border-stone-50 group hover:border-stone-100 transition-all shadow-sm cursor-pointer active:scale-[0.98]">
                         <div class="flex items-center gap-4 min-w-0">
                             <div :class="a.type === 'asset' ? 'bg-emerald-50 text-emerald-600' : (a.type === 'investment' ? 'bg-blue-50 text-blue-600' : 'bg-rose-50 text-rose-600')" class="w-10 h-10 rounded-xl flex items-center justify-center text-lg flex-shrink-0 shadow-sm">
                                 <i :data-lucide="a.type === 'investment' ? 'line-chart' : (a.type === 'liability' ? 'trending-down' : 'trending-up')" class="w-5 h-5"></i>
                             </div>
                             <div class="min-w-0">
                                 <p class="text-sm font-bold text-stone-800 truncate">{{ a.name }}</p>
-                                <p class="text-[9px] text-stone-400 uppercase tracking-widest font-serif truncate">{{ a.type === 'asset' ? '一般資產' : (a.type === 'investment' ? '證券帳戶' : '負債帳戶') }}</p>
+                                <p class="text-[9px] text-stone-400 uppercase tracking-widest font-serif truncate">{{ a.type === 'asset' ? '資產' : (a.type === 'investment' ? '證券' : '負債') }}</p>
                             </div>
                         </div>
-                        <div class="flex items-center gap-2 flex-shrink-0">
-                            <p class="font-serif font-bold text-sm" :class="a.type === 'liability' ? 'text-rose-500' : 'text-stone-800'">${{ (a.amount || 0).toLocaleString() }}</p>
-                            <i data-lucide="chevron-right" class="w-3 h-3 text-stone-200"></i>
-                        </div>
+                        <p class="font-serif font-bold text-sm" :class="a.type === 'liability' ? 'text-rose-500' : 'text-stone-800'">${{ (a.amount || 0).toLocaleString() }}</p>
                     </div>
                 </div>
             </div>
 
-            <!-- 4. 管理分頁 (Management) -->
+            <!-- 4. 管理分頁 -->
             <div v-if="activeTab === 'stats'" class="space-y-8">
-                <h3 class="text-lg font-bold flex items-center gap-2"><i data-lucide="settings-2" class="w-5 h-5"></i> 系統與分類管理</h3>
-                
                 <div class="p-5 bg-white rounded-3xl border border-stone-100 shadow-sm space-y-4">
                     <p class="text-[10px] font-bold text-stone-400 uppercase tracking-widest">手札顯示名稱</p>
-                    <div class="flex flex-col sm:flex-row gap-2">
+                    <div class="flex flex-col gap-2">
                         <input type="text" v-model="tempAppTitle" class="w-full bg-stone-50 rounded-xl py-3 px-4 text-base font-bold border border-stone-100 outline-none">
-                        <button @click="updateSettings" :disabled="isSaving" class="bg-stone-800 text-white px-6 py-2.5 rounded-xl text-xs font-bold active:scale-95 transition-all">更新名稱</button>
+                        <button @click="updateSettings" :disabled="isSaving" class="bg-stone-800 text-white px-6 py-2.5 rounded-xl text-xs font-bold active:scale-95 transition-all shadow-sm">更新手札名稱</button>
                     </div>
                 </div>
 
@@ -210,37 +197,35 @@
                 <div v-for="type in ['expense', 'income']" :key="type" class="space-y-3 pb-4">
                     <p class="text-[10px] font-bold text-stone-400 uppercase px-2 flex items-center gap-2"><i :data-lucide="type === 'expense' ? 'arrow-down-circle' : 'arrow-up-circle'" class="w-3 h-3"></i> 當前{{ type === 'expense' ? '支出' : '收入' }}分類</p>
                     <div v-for="cat in categories[type]" :key="cat.id" @click="openCategoryDetail(cat, type)" class="flex items-center justify-between p-4 bg-white border border-stone-100 rounded-2xl hover:border-stone-200 transition-all shadow-sm cursor-pointer active:scale-[0.98]">
-                        <div class="flex items-center gap-3 min-w-0">
-                            <span class="text-lg flex-shrink-0">{{ cat.icon }}</span>
-                            <span class="text-sm font-medium truncate">{{ cat.name }}</span>
-                        </div>
+                        <div class="flex items-center gap-3"><span class="text-lg">{{ cat.icon }}</span><span class="text-sm font-medium">{{ cat.name }}</span></div>
                         <i data-lucide="chevron-right" class="w-3 h-3 text-stone-200"></i>
                     </div>
                 </div>
             </div>
         </main>
 
+        <!-- 詳情與編輯彈窗群組 (z-[600]) -->
         <transition name="fade">
             <div v-if="isTransactionDetailModalOpen || isAssetDetailModalOpen || isCategoryDetailModalOpen || isDayDetailModalOpen || isCategoryTransactionsModalOpen" class="fixed inset-0 bg-stone-900/40 backdrop-blur-md z-[600] flex items-center justify-center p-4">
                 
-                <!-- 紀錄詳情 -->
+                <!-- 1. 紀錄單獨詳情 -->
                 <div v-if="isTransactionDetailModalOpen" class="bg-white w-full max-w-sm rounded-[2.5rem] p-8 shadow-2xl slide-up-enter-active text-center relative overflow-hidden">
-                    <div class="flex justify-between items-center mb-6"><div class="w-6"></div><h3 class="text-xl font-serif font-bold">紀錄詳情</h3><button @click="isTransactionDetailModalOpen = false" class="p-2"><i data-lucide="x" class="w-5 h-5"></i></button></div>
+                    <div class="flex justify-between items-center mb-6"><div class="w-6"></div><h3 class="text-xl font-serif font-bold">紀錄詳情</h3><button @click="isTransactionDetailModalOpen = false" class="p-2 hover:bg-stone-50 rounded-full"><i data-lucide="x" class="w-5 h-5"></i></button></div>
                     <div v-if="selectedTransaction" class="space-y-6">
                         <div class="w-20 h-20 bg-stone-50 rounded-full flex items-center justify-center mx-auto text-4xl shadow-inner border border-stone-100">{{ getCategoryIcon(selectedTransaction.type, selectedTransaction.category) }}</div>
                         <div class="min-w-0"><h4 class="text-lg font-bold text-stone-800 truncate">{{ getCategoryName(selectedTransaction.type, selectedTransaction.category) }}</h4><p class="text-[10px] text-stone-400 uppercase font-bold">{{ selectedTransaction.type === 'expense' ? '支出項目' : '收入項目' }}</p></div>
                         <div class="space-y-2 py-4 border-y border-stone-50 text-left text-xs">
                             <p class="flex justify-between"><span class="text-stone-400 font-bold">日期</span><span class="font-mono text-stone-600">{{ selectedTransaction.date }} {{ selectedTransaction.time }}</span></p>
                             <p v-if="selectedTransaction.note" class="flex justify-between gap-4"><span class="text-stone-400 font-bold flex-shrink-0">備註</span><span class="text-stone-600 italic text-right break-words line-clamp-3">{{ selectedTransaction.note }}</span></p>
-                            <p class="flex justify-between"><span class="text-stone-400 font-bold">交易金額</span><span class="font-serif font-bold text-lg" :class="selectedTransaction.type === 'expense' ? 'text-stone-800' : 'text-emerald-600'">${{ selectedTransaction.amount.toLocaleString() }}</span></p>
+                            <p class="flex justify-between"><span class="text-stone-400 font-bold">金額</span><span class="font-serif font-bold text-lg" :class="selectedTransaction.type === 'expense' ? 'text-stone-800' : 'text-emerald-600'">${{ selectedTransaction.amount.toLocaleString() }}</span></p>
                         </div>
-                        <div class="flex gap-3"><button @click="startEdit(selectedTransaction)" class="flex-1 bg-stone-100 text-stone-600 py-3 rounded-2xl text-xs font-bold hover:bg-stone-200 transition-all active:scale-95">編輯修改</button><button @click="requestDelete(selectedTransaction.id)" class="flex-1 bg-rose-50 text-rose-400 py-3 rounded-2xl text-xs font-bold hover:bg-rose-100 transition-all active:scale-95">抹除紀錄</button></div>
+                        <div class="flex gap-3"><button @click="startEdit(selectedTransaction); isTransactionDetailModalOpen = false" class="flex-1 bg-stone-100 text-stone-600 py-3 rounded-2xl text-xs font-bold hover:bg-stone-200 transition-all active:scale-95"><i data-lucide="pencil" class="w-3.5 h-3.5 inline mr-1"></i> 編輯修改</button><button @click="requestDelete(selectedTransaction.id); isTransactionDetailModalOpen = false" class="flex-1 bg-rose-50 text-rose-400 py-3 rounded-2xl text-xs font-bold hover:bg-rose-100 transition-all active:scale-95"><i data-lucide="trash-2" class="w-3.5 h-3.5 inline mr-1"></i> 紀錄抹除</button></div>
                     </div>
                 </div>
 
-                <!-- 帳戶詳情 -->
+                <!-- 2. 帳戶詳情 -->
                 <div v-if="isAssetDetailModalOpen" class="bg-white w-full max-w-sm rounded-[2.5rem] p-8 shadow-2xl slide-up-enter-active text-center relative overflow-hidden">
-                    <div class="flex justify-between items-center mb-6"><div class="w-6"></div><h3 class="text-xl font-serif font-bold">帳戶詳情</h3><button @click="isAssetDetailModalOpen = false" class="p-2"><i data-lucide="x" class="w-5 h-5"></i></button></div>
+                    <div class="flex justify-between items-center mb-6"><div class="w-6"></div><h3 class="text-xl font-serif font-bold">帳戶詳情</h3><button @click="isAssetDetailModalOpen = false" class="p-2 hover:bg-stone-50 rounded-full"><i data-lucide="x" class="w-5 h-5"></i></button></div>
                     <div v-if="selectedAsset" class="space-y-6">
                         <div :class="selectedAsset.type === 'asset' ? 'bg-emerald-50 text-emerald-600' : (selectedAsset.type === 'investment' ? 'bg-blue-50 text-blue-600' : 'bg-rose-50 text-rose-600')" class="w-20 h-20 rounded-3xl flex items-center justify-center mx-auto text-4xl shadow-sm"><i :data-lucide="selectedAsset.type === 'investment' ? 'line-chart' : (selectedAsset.type === 'liability' ? 'trending-down' : 'trending-up')" class="w-10 h-10"></i></div>
                         <h4 class="text-lg font-bold text-stone-800 truncate">{{ selectedAsset.name }}</h4>
@@ -252,7 +237,7 @@
                     </div>
                 </div>
 
-                <!-- 分類當月明細列表 (備註優先) -->
+                <!-- 3. 分類當月明細列表 (備註優先) -->
                 <div v-if="isCategoryTransactionsModalOpen" class="bg-white w-full max-w-md rounded-[2.5rem] p-8 shadow-2xl max-h-[80vh] flex flex-col slide-up-enter-active relative">
                     <div class="flex justify-between items-center mb-6">
                         <div class="flex items-center gap-3 flex-1 min-w-0"><span class="text-2xl">{{ selectedCategoryForList?.icon }}</span><h3 class="text-xl font-serif font-bold truncate">{{ selectedCategoryForList?.name }} 本月明細</h3></div>
@@ -272,9 +257,23 @@
                     </div>
                 </div>
 
-                <!-- 分類詳情 -->
+                <!-- 4. 當日明細 (月曆點擊) -->
+                <div v-if="isDayDetailModalOpen" class="bg-white w-full max-w-md rounded-[2.5rem] p-8 shadow-2xl max-h-[80vh] flex flex-col slide-up-enter-active relative">
+                    <div class="flex justify-between items-center mb-6"><h3 class="text-xl font-serif font-bold">{{ selectedDateStr }} 紀錄</h3><button @click="isDayDetailModalOpen = false" class="p-2 hover:bg-stone-50 rounded-full text-stone-300"><i data-lucide="x" class="w-6 h-6"></i></button></div>
+                    <div class="flex-1 overflow-y-auto custom-scrollbar space-y-4 pr-1">
+                        <div v-for="t in selectedDayTransactions" :key="t.id" @click="openTransactionDetail(t)" class="flex items-center justify-between p-4 bg-stone-50 rounded-2xl border border-stone-100 group cursor-pointer hover:border-stone-300 transition-all">
+                            <div class="flex items-center gap-4">
+                                <div class="w-10 h-10 bg-white rounded-xl flex items-center justify-center text-xl shadow-sm flex-shrink-0">{{ getCategoryIcon(t.type, t.category) }}</div>
+                                <div><div class="flex items-center gap-2"><p class="text-sm font-bold text-stone-800">{{ getCategoryName(t.type, t.category) }}</p><span class="text-[8px] text-stone-400 font-mono whitespace-nowrap">{{ t.time }}</span></div><p v-if="t.note" class="text-[10px] text-stone-400 italic line-clamp-1 mt-0.5">{{ t.note }}</p></div>
+                            </div>
+                            <div class="flex items-center gap-2 flex-shrink-0"><p class="font-serif font-bold text-sm" :class="t.type === 'expense' ? 'text-stone-700' : 'text-emerald-600'">{{ t.type === 'expense' ? '-' : '+' }}${{ t.amount.toLocaleString() }}</p><i data-lucide="chevron-right" class="w-3 h-3 text-stone-200"></i></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 5. 分類設定詳情 -->
                 <div v-if="isCategoryDetailModalOpen" class="bg-white w-full max-w-sm rounded-[2.5rem] p-8 shadow-2xl slide-up-enter-active text-center relative overflow-hidden">
-                    <div class="flex justify-between items-center mb-6"><div class="w-6"></div><h3 class="text-xl font-serif font-bold">分類詳情</h3><button @click="isCategoryDetailModalOpen = false" class="p-2 hover:bg-stone-50 rounded-full"><i data-lucide="x" class="w-5 h-5"></i></button></div>
+                    <div class="flex justify-between items-center mb-6"><div class="w-6"></div><h3 class="text-xl font-serif font-bold">分類設定</h3><button @click="isCategoryDetailModalOpen = false" class="p-2 hover:bg-stone-50 rounded-full"><i data-lucide="x" class="w-5 h-5"></i></button></div>
                     <div v-if="selectedCategory" class="space-y-6">
                         <div class="w-20 h-20 bg-stone-50 rounded-full flex items-center justify-center mx-auto text-4xl shadow-inner border border-stone-100">{{ selectedCategory.icon }}</div>
                         <h4 class="text-lg font-bold text-stone-800">{{ selectedCategory.name }}</h4>
@@ -284,39 +283,26 @@
                         </div>
                     </div>
                 </div>
-
-                <!-- 當日列表 (月曆點擊) -->
-                <div v-if="isDayDetailModalOpen" class="bg-white w-full max-w-md rounded-[2.5rem] p-8 shadow-2xl max-h-[80vh] flex flex-col slide-up-enter-active relative">
-                    <div class="flex justify-between items-center mb-6"><h3 class="text-xl font-serif font-bold">{{ selectedDateStr }} 紀錄</h3><button @click="isDayDetailModalOpen = false" class="p-2 hover:bg-stone-50 rounded-full text-stone-300"><i data-lucide="x" class="w-6 h-6"></i></button></div>
-                    <div class="flex-1 overflow-y-auto custom-scrollbar space-y-4 pr-1">
-                        <div v-for="t in selectedDayTransactions" :key="t.id" @click="openTransactionDetail(t)" class="flex items-center justify-between p-4 bg-stone-50 rounded-2xl border border-stone-100 group cursor-pointer hover:border-stone-300 transition-all">
-                            <div class="flex items-center gap-4 min-w-0">
-                                <div class="w-10 h-10 bg-white rounded-xl flex items-center justify-center text-xl flex-shrink-0 shadow-sm">{{ getCategoryIcon(t.type, t.category) }}</div>
-                                <div class="min-w-0"><div class="flex items-center gap-2"><p class="text-sm font-bold text-stone-800 truncate">{{ getCategoryName(t.type, t.category) }}</p><span class="text-[8px] text-stone-400 font-mono">{{ t.time }}</span></div><p v-if="t.note" class="text-[10px] text-stone-400 italic line-clamp-1 mt-0.5">{{ t.note }}</p></div>
-                            </div>
-                            <div class="flex items-center gap-2 flex-shrink-0"><p class="font-serif font-bold text-sm" :class="t.type === 'expense' ? 'text-stone-700' : 'text-emerald-600'">{{ t.type === 'expense' ? '-' : '+' }}${{ t.amount.toLocaleString() }}</p><i data-lucide="chevron-right" class="w-3 h-3 text-stone-200"></i></div>
-                        </div>
-                    </div>
-                </div>
             </div>
         </transition>
 
+        <!-- 編輯表單與二次確認 z-[700+] -->
         <transition name="fade">
             <div v-if="activeTab === 'add' || isAssetEditModalOpen || isCategoryEditModalOpen" class="fixed inset-0 bg-stone-900/10 backdrop-blur-sm z-[700] flex items-end sm:items-center justify-center p-0 sm:p-6">
-                <!-- 收支紀錄編輯 -->
+                <!-- 1. 收支紀錄 -->
                 <div v-if="activeTab === 'add'" class="bg-white w-full max-w-md rounded-t-[2.5rem] sm:rounded-[2.5rem] p-8 shadow-2xl slide-up-enter-active relative">
-                    <div class="flex justify-between items-center mb-8"><h3 class="text-xl font-serif font-bold">{{ editingId ? '修改手札' : '紀錄美好此刻' }}</h3><button @click="closeForm" class="p-2 text-stone-300"><i data-lucide="x" class="w-6 h-6"></i></button></div>
+                    <div class="flex justify-between items-center mb-8"><h3 class="text-xl font-serif font-bold">{{ editingId ? '修改手札紀錄' : '紀錄此刻美好' }}</h3><button @click="closeForm" class="p-2 text-stone-300 hover:text-stone-800"><i data-lucide="x" class="w-6 h-6"></i></button></div>
                     <form @submit.prevent="handleSubmit" class="space-y-6">
                         <div class="flex p-1 bg-stone-50 rounded-2xl flex-shrink-0"><button type="button" @click="formData.type = 'expense'; formData.category = categories.expense[0]?.id" :class="formData.type === 'expense' ? 'bg-stone-800 text-white shadow-md' : 'text-stone-400'" class="flex-1 py-2 text-sm font-medium rounded-xl transition-all">支出</button><button type="button" @click="formData.type = 'income'; formData.category = categories.income[0]?.id" :class="formData.type === 'income' ? 'bg-stone-800 text-white shadow-md' : 'text-stone-400'" class="flex-1 py-2 text-sm font-medium rounded-xl transition-all">收入</button></div>
-                        <div class="relative"><span class="absolute left-0 bottom-2 text-2xl font-serif font-bold text-stone-300">$</span><input type="number" v-model="formData.amount" placeholder="0" required class="w-full bg-transparent border-b-2 border-stone-100 py-2 pl-6 text-4xl font-serif font-bold focus:outline-none"></div>
-                        <div class="grid grid-cols-3 gap-3 max-h-48 overflow-y-auto no-scrollbar custom-scrollbar"><button v-for="cat in categories[formData.type]" :key="cat.id" type="button" @click="formData.category = cat.id" :class="formData.category === cat.id ? 'bg-stone-800 text-white shadow-md' : 'bg-white border-stone-100 text-stone-500'" class="flex flex-col items-center gap-1 p-3 rounded-2xl border transition-all shadow-sm"><span class="text-xl">{{ cat.icon }}</span><span class="text-[10px] font-medium">{{ cat.name }}</span></button></div>
+                        <div class="relative"><span class="absolute left-0 bottom-2 text-2xl font-serif font-bold text-stone-300">$</span><input type="number" v-model="formData.amount" placeholder="0" required class="w-full bg-transparent border-b-2 border-stone-100 py-2 pl-6 text-4xl font-serif font-bold focus:outline-none focus:border-stone-300"></div>
+                        <div class="grid grid-cols-3 gap-3 max-h-48 overflow-y-auto no-scrollbar custom-scrollbar"><button v-for="cat in categories[formData.type]" :key="cat.id" type="button" @click="formData.category = cat.id" :class="formData.category === cat.id ? 'bg-stone-800 text-white shadow-md' : 'bg-white border-stone-100 text-stone-500 hover:border-stone-200'" class="flex flex-col items-center gap-1 p-3 rounded-2xl border transition-all shadow-sm"><span class="text-xl">{{ cat.icon }}</span><span class="text-[10px] font-medium">{{ cat.name }}</span></button></div>
                         <div v-if="assets.length > 0" class="space-y-1"><label class="text-[10px] text-stone-400 font-bold uppercase flex items-center gap-1"><i data-lucide="link" class="w-3 h-3"></i>連動帳戶</label><select v-model="formData.linkedAssetId" class="w-full bg-stone-50 rounded-xl p-3 text-base border-stone-100 shadow-sm focus:outline-none"><option value="">不連動</option><option v-for="a in assets" :key="a.id" :value="a.id">{{ a.name }} (${{ (a.amount || 0).toLocaleString() }})</option></select></div>
                         <div class="grid grid-cols-2 gap-4"><input type="date" v-model="formData.date" required class="bg-stone-50 border-stone-100 border rounded-xl p-3 text-base shadow-sm"><input type="time" v-model="formData.time" required class="bg-stone-50 border-stone-100 border rounded-xl p-3 text-base shadow-sm"></div>
                         <input type="text" v-model="formData.note" placeholder="記錄下這筆收支的小細節..." class="w-full bg-stone-50 border-stone-100 border rounded-xl p-3 text-base shadow-sm focus:outline-none focus:ring-1 focus:ring-stone-200"><button type="submit" class="w-full bg-stone-800 text-white py-4 rounded-2xl font-bold tracking-[0.2em] hover:bg-stone-700 active:scale-95 transition-all shadow-lg">存入生活紀錄</button>
                     </form>
                 </div>
 
-                <!-- 帳戶編輯 -->
+                <!-- 2. 帳戶編輯表單 -->
                 <div v-if="isAssetEditModalOpen" class="bg-white w-full max-w-md rounded-t-[2.5rem] sm:rounded-[2.5rem] p-8 shadow-2xl slide-up-enter-active relative">
                     <div class="flex justify-between items-center mb-8"><h3 class="text-xl font-serif font-bold">{{ editingAssetId ? '修改帳戶項目' : '新增帳戶項目' }}</h3><button @click="isAssetEditModalOpen = false" class="p-2 hover:bg-stone-50 rounded-full text-stone-300"><i data-lucide="x" class="w-6 h-6"></i></button></div>
                     <div class="space-y-6">
@@ -325,27 +311,28 @@
                             <button @click="assetForm.type = 'investment'" :class="assetForm.type === 'investment' ? 'bg-stone-800 text-white shadow-md' : 'bg-stone-50 text-stone-400'" class="py-2.5 rounded-xl text-xs font-bold transition-all">證券</button>
                             <button @click="assetForm.type = 'liability'" :class="assetForm.type === 'liability' ? 'bg-stone-800 text-white shadow-md' : 'bg-stone-50 text-stone-400'" class="py-2.5 rounded-xl text-xs font-bold transition-all">負債</button>
                         </div>
-                        <input type="text" v-model="assetForm.name" placeholder="帳戶名稱" class="w-full bg-stone-50 rounded-xl px-4 py-3 text-base border border-stone-100 outline-none shadow-sm focus:ring-1 focus:ring-stone-200">
+                        <input type="text" v-model="assetForm.name" placeholder="帳戶名稱 (如：薪轉帳戶)" class="w-full bg-stone-50 rounded-xl px-4 py-3 text-base border border-stone-100 outline-none shadow-sm focus:ring-1 focus:ring-stone-200">
                         <div class="grid grid-cols-2 gap-4">
                             <div class="space-y-1"><label class="text-[10px] text-stone-400 font-bold uppercase tracking-widest">起始額</label><input type="number" v-model="assetForm.initialAmount" class="w-full bg-stone-50 rounded-xl px-4 py-3 text-base border-stone-100 border outline-none shadow-sm"></div>
-                            <div class="space-y-1"><label class="text-[10px] text-stone-400 font-bold uppercase tracking-widest">餘額</label><input type="number" v-model="assetForm.amount" class="w-full bg-emerald-50/50 rounded-xl px-4 py-3 text-base outline-none font-bold"></div>
+                            <div class="space-y-1"><label class="text-[10px] text-stone-400 font-bold uppercase tracking-widest">目前實際餘額</label><input type="number" v-model="assetForm.amount" class="w-full bg-emerald-50/50 rounded-xl px-4 py-3 text-base outline-none font-bold"></div>
                         </div>
-                        <button @click="handleAssetSubmit" class="w-full bg-stone-800 text-white py-4 rounded-2xl font-bold tracking-[0.2em] hover:bg-stone-700 active:scale-95 transition-all shadow-lg">存入手札帳戶</button>
+                        <button @click="handleAssetSubmit" class="w-full bg-stone-800 text-white py-4 rounded-2xl font-bold tracking-[0.2em] hover:bg-stone-700 active:scale-95 transition-all shadow-lg">存入生活帳戶</button>
                     </div>
                 </div>
 
-                <!-- 分類編輯 -->
+                <!-- 3. 分類編輯表單 -->
                 <div v-if="isCategoryEditModalOpen" class="bg-white w-full max-w-md rounded-t-[2.5rem] sm:rounded-[2.5rem] p-8 shadow-2xl slide-up-enter-active relative">
-                    <div class="flex justify-between items-center mb-8"><h3 class="text-xl font-serif font-bold">{{ editingCategoryId ? '修改分類' : '新增分類' }}</h3><button @click="isCategoryEditModalOpen = false" class="p-2 hover:bg-stone-50 rounded-full text-stone-300"><i data-lucide="x" class="w-6 h-6"></i></button></div>
+                    <div class="flex justify-between items-center mb-8"><h3 class="text-xl font-serif font-bold">{{ editingCategoryId ? '修改收支分類' : '新增收支分類' }}</h3><button @click="isCategoryEditModalOpen = false" class="p-2 hover:bg-stone-50 rounded-full text-stone-300"><i data-lucide="x" class="w-6 h-6"></i></button></div>
                     <div class="space-y-6">
                         <div class="grid grid-cols-2 gap-2"><button @click="catForm.type = 'expense'" :class="catForm.type === 'expense' ? 'bg-stone-800 text-white shadow-md' : 'bg-white text-stone-400 border border-stone-100'" class="py-3 rounded-xl text-xs font-bold active:scale-95">支出</button><button @click="catForm.type = 'income'" :class="catForm.type === 'income' ? 'bg-stone-800 text-white shadow-md' : 'bg-white text-stone-400 border border-stone-100'" class="py-3 rounded-xl text-xs font-bold active:scale-95">收入</button></div>
-                        <div class="grid grid-cols-4 gap-3 items-center"><input type="text" v-model="catForm.icon" class="text-center bg-stone-50 rounded-xl p-3 border border-stone-100 outline-none text-2xl shadow-inner"><input type="text" v-model="catForm.name" placeholder="名稱" class="col-span-3 bg-stone-50 rounded-xl p-3 text-base border border-stone-100 outline-none shadow-sm"></div>
-                        <button @click="saveCategory" class="w-full bg-stone-800 text-white py-4 rounded-2xl font-bold tracking-[0.2em] hover:bg-stone-700 active:scale-95 shadow-lg">保存分類</button>
+                        <div class="grid grid-cols-4 gap-3 items-center"><input type="text" v-model="catForm.icon" class="text-center bg-stone-50 rounded-xl p-3 border border-stone-100 outline-none text-2xl shadow-inner"><input type="text" v-model="catForm.name" placeholder="分類名稱" class="col-span-3 bg-stone-50 rounded-xl p-3 text-base border border-stone-100 outline-none shadow-sm"></div>
+                        <button @click="saveCategory" class="w-full bg-stone-800 text-white py-4 rounded-2xl font-bold tracking-[0.2em] hover:bg-stone-700 active:scale-95 shadow-lg">保存分類設定</button>
                     </div>
                 </div>
             </div>
         </transition>
 
+        <!-- 刪除確認彈窗 (最高層級 z-[1000]) -->
         <transition name="fade">
             <div v-if="isDeleteModalOpen" class="fixed inset-0 bg-stone-900/60 backdrop-blur-md z-[1000] flex items-center justify-center p-6 text-center">
                 <div class="bg-white w-full max-w-[280px] rounded-[2rem] p-8 shadow-2xl animate-in zoom-in-95 relative">
@@ -360,7 +347,8 @@
             </div>
         </transition>
 
-        <nav class="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-stone-100 h-20 z-[400] px-8 py-4 shadow-[0_-4px_10px_rgba(0,0,0,0.02)]">
+        <!-- 底部導覽欄 (z-[400]) -->
+        <nav class="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-stone-100 h-20 z-[400] px-6 shadow-[0_-4px_10px_rgba(0,0,0,0.02)]">
             <div class="max-w-md mx-auto h-full flex justify-between items-center text-[10px] font-bold tracking-widest">
                 <button @click="activeTab = 'dashboard'; editingId = null" :class="activeTab === 'dashboard' ? 'text-stone-800' : 'text-stone-300'" class="flex flex-col items-center gap-1 transition-all"><i data-lucide="book-open" class="w-5 h-5"></i><span>概覽</span></button>
                 <button @click="activeTab = 'calendar'; editingId = null" :class="activeTab === 'calendar' ? 'text-stone-800' : 'text-stone-300'" class="flex flex-col items-center gap-1 transition-all"><i data-lucide="calendar" class="w-5 h-5"></i><span>月曆</span></button>
@@ -369,14 +357,17 @@
                 <button @click="activeTab = 'stats'; editingId = null" :class="activeTab === 'stats' ? 'text-stone-800' : 'text-stone-300'" class="flex flex-col items-center gap-1 transition-all"><i data-lucide="settings-2" class="w-5 h-5"></i><span>管理</span></button>
             </div>
         </nav>
+
+        <div class="fixed top-20 right-[-10%] w-64 h-64 bg-stone-200/30 rounded-full blur-3xl -z-10"></div>
+        <div class="fixed bottom-20 left-[-10%] w-48 h-48 bg-stone-200/30 rounded-full blur-3xl -z-10"></div>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, doc, setDoc, addDoc, updateDoc, deleteDoc, onSnapshot, getDoc, runTransaction } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, collection, doc, setDoc, addDoc, updateDoc, deleteDoc, onSnapshot, getDoc, getDocs, runTransaction } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // 置頂常數
+        // 置頂常數，防止 ReferenceError
         const DEFAULT_CATEGORIES = {
             expense: [{ id: 'food', name: '喫茶食堂', icon: '☕' }, { id: 'shopping', name: '生活什物', icon: '🛍️' }, { id: 'transport', name: '城市漫遊', icon: '🚲' }, { id: 'entertainment', name: '藝文時光', icon: '🎬' }, { id: 'housing', name: '居家處所', icon: '🏠' }, { id: 'others', name: '雜項支出', icon: '🍃' }],
             income: [{ id: 'salary', name: '勞動報酬', icon: '💼' }, { id: 'investment', name: '被動收益', icon: '📈' }, { id: 'gift', name: '意外驚喜', icon: '🎁' }, { id: 'others', name: '其他收入', icon: '✨' }]
@@ -384,15 +375,16 @@
 
         const firebaseConfig = { apiKey: "AIzaSyAvaFDPsE4x-n8lHnz-sO6u6eQ7YTEecBU", authDomain: "family-2b29b.firebaseapp.com", projectId: "family-2b29b", storageBucket: "family-2b29b.firebasestorage.app", messagingSenderId: "818241774134", appId: "1:818241774134:web:82ecdc7531acebf623ae97", measurementId: "G-Q8G26W3LW1" };
         const appId = "family-2b29b";
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
+        const fbApp = initializeApp(firebaseConfig);
+        const auth = getAuth(fbApp);
+        const db = getFirestore(fbApp);
 
         const { createApp, ref, computed, onMounted, watch, nextTick } = Vue;
         const CHART_COLORS = ['#3B82F6', '#10B981', '#F43F5E', '#A8A29E', '#78716C', '#D6D3D1', '#44403C', '#E7E5E4'];
 
         createApp({
             setup() {
+                // 1. 狀態宣告
                 const isAuthReady = ref(false), currentUser = ref(null), errorMessage = ref(''), successMessage = ref('');
                 const activeTab = ref('dashboard'), currentDate = ref(new Date()), transactions = ref([]), assets = ref([]), categories = ref(DEFAULT_CATEGORIES);
                 const appTitle = ref('陳家記帳日誌'), isSaving = ref(false), editingId = ref(null), editingAssetId = ref(null), editingCategoryId = ref(null);
@@ -401,31 +393,68 @@
                 const selectedDateStr = ref(''), selectedDayTransactions = ref([]), tempAppTitle = ref('');
                 const assetForm = ref({ name: '', amount: '', initialAmount: '', type: 'asset' }), catForm = ref({ id: '', name: '', icon: '📁', type: 'expense' });
 
-                const getTransactionsRef = () => collection(db, 'artifacts', appId, 'public', 'data', 'transactions');
-                const getAssetsRef = () => collection(db, 'artifacts', appId, 'public', 'data', 'assets');
-                const getCategoriesRef = () => collection(db, 'artifacts', appId, 'public', 'data', 'categories');
-                const getSettingsDocRef = () => doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'global');
-
+                // 2. 輔助函式 (必須宣告在被使用之前)
                 const refreshIcons = () => nextTick(() => { if (typeof lucide !== 'undefined') lucide.createIcons(); });
                 const showSuccess = (msg) => { successMessage.value = msg; setTimeout(() => successMessage.value = '', 3000); };
                 const getNowStrings = () => { const now = new Date(); return { date: now.toLocaleDateString('en-CA'), time: now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false }) }; };
+                const closeForm = () => { 
+                    activeTab.value = 'dashboard'; 
+                    editingId.value = null; 
+                    isAssetEditModalOpen.value = false;
+                    isCategoryEditModalOpen.value = false;
+                    formData.value = { type: 'expense', amount: '', category: categories.value.expense[0]?.id || '', note: '', linkedAssetId: '', ...getNowStrings() }; 
+                };
                 const formData = ref({ type: 'expense', amount: '', category: '', note: '', linkedAssetId: '', ...getNowStrings() });
 
+                // 3. 資料庫路徑
+                const getTransactionsRef = () => collection(db, 'transactions');
+                const getAssetsRef = () => collection(db, 'assets');
+                const getCategoriesRef = () => collection(db, 'categories');
+                const getSettingsDocRef = () => doc(db, 'settings', 'global');
+                const getOldTransactionsRef = () => collection(db, 'artifacts', appId, 'public', 'data', 'transactions');
+                const getOldAssetsRef = () => collection(db, 'artifacts', appId, 'public', 'data', 'assets');
+                const getOldCategoriesRef = () => collection(db, 'artifacts', appId, 'public', 'data', 'categories');
+                const getOldSettingsDocRef = () => doc(db, 'artifacts', appId, 'public', 'data', 'settings', 'global');
+
+                // 4. 搬家與同步邏輯
+                async function autoMigrate() {
+                    try {
+                        const oldSet = await getDoc(getOldSettingsDocRef());
+                        if (oldSet.exists()) await setDoc(getSettingsDocRef(), oldSet.data(), { merge: true });
+                        const oldAssets = await getDocs(getOldAssetsRef());
+                        for (let d of oldAssets.docs) await setDoc(doc(getAssetsRef(), d.id), d.data(), { merge: true });
+                        const oldCats = await getDocs(getOldCategoriesRef());
+                        for (let d of oldCats.docs) await setDoc(doc(getCategoriesRef(), d.id), d.data(), { merge: true });
+                        const oldTx = await getDocs(getOldTransactionsRef());
+                        for (let d of oldTx.docs) await setDoc(doc(getTransactionsRef(), d.id), d.data(), { merge: true });
+                    } catch (err) { console.warn("搬家作業暫略 (可能是全新用戶)"); }
+                }
+
+                const startSync = () => {
+                    onSnapshot(getTransactionsRef(), (s) => { const temp = []; s.docs.forEach(d => { const data = d.data(); temp.push({ ...data, id: data.id || d.id }); }); transactions.value = temp; });
+                    onSnapshot(getAssetsRef(), (s) => { const temp = []; s.docs.forEach(d => { const data = d.data(); temp.push({ ...data, id: data.id || d.id }); }); assets.value = temp; });
+                    onSnapshot(getCategoriesRef(), (s) => { if (!s.empty) { const c = { expense: [], income: [] }; s.docs.forEach(d => { const dt = d.data(); if (dt.type && c[dt.type]) c[dt.type].push({ ...dt, id: dt.id || d.id }); }); categories.value = c; } });
+                    onSnapshot(getSettingsDocRef(), (s) => { if (s.exists()) { appTitle.value = s.data().appTitle || '陳家記帳日誌'; tempAppTitle.value = appTitle.value; } });
+                };
+
+                // 5. 計算屬性
                 const yearlyStats = computed(() => {
-                    const list = transactions.value.filter(t => new Date(t.date).getFullYear() === currentDate.value.getFullYear());
-                    const inc = list.filter(t => t.type === 'income').reduce((s, t) => s + Number(t.amount), 0), exp = list.filter(t => t.type === 'expense').reduce((s, t) => s + Number(t.amount), 0);
+                    const list = transactions.value.filter(t => t && t.date && new Date(t.date).getFullYear() === currentDate.value.getFullYear());
+                    const inc = list.filter(t => t.type === 'income').reduce((s, t) => s + Number(t.amount || 0), 0), exp = list.filter(t => t.type === 'expense').reduce((s, t) => s + Number(t.amount || 0), 0);
                     return { income: inc, expense: exp, balance: inc - exp };
                 });
                 const monthlyStats = computed(() => {
-                    const list = transactions.value.filter(t => { const d = new Date(t.date); return d.getMonth() === currentDate.value.getMonth() && d.getFullYear() === currentDate.value.getFullYear(); });
-                    const inc = list.filter(t => t.type === 'income').reduce((s, t) => s + Number(t.amount), 0), exp = list.filter(t => t.type === 'expense').reduce((s, t) => s + Number(t.amount), 0);
+                    const monthStr = `${currentDate.value.getFullYear()}-${String(currentDate.value.getMonth() + 1).padStart(2, '0')}`;
+                    const list = transactions.value.filter(t => t && t.date && t.date.startsWith(monthStr));
+                    const inc = list.filter(t => t.type === 'income').reduce((s, t) => s + Number(t.amount || 0), 0), exp = list.filter(t => t.type === 'expense').reduce((s, t) => s + Number(t.amount || 0), 0);
                     return { income: inc, expense: exp, balance: inc - exp };
                 });
                 const categoryAnalysis = computed(() => {
-                    const list = transactions.value.filter(t => { const d = new Date(t.date); return d.getMonth() === currentDate.value.getMonth() && d.getFullYear() === currentDate.value.getFullYear(); });
-                    const totalExp = list.filter(t => t.type === 'expense').reduce((s, t) => s + Number(t.amount), 0);
+                    const monthStr = `${currentDate.value.getFullYear()}-${String(currentDate.value.getMonth() + 1).padStart(2, '0')}`;
+                    const list = transactions.value.filter(t => t && t.date && t.date.startsWith(monthStr) && t.type === 'expense');
+                    const totalExp = list.reduce((s, t) => s + Number(t.amount || 0), 0);
                     if (totalExp === 0) return [];
-                    return categories.value.expense.map(cat => ({ ...cat, total: list.filter(t => t.type === 'expense' && t.category === cat.id).reduce((s, t) => s + Number(t.amount), 0) })).map(c => ({ ...c, percent: Number(((c.total / totalExp) * 100).toFixed(0)) })).filter(c => c.total > 0).sort((a, b) => b.total - a.total);
+                    return categories.value.expense.map(cat => ({ ...cat, total: list.filter(t => t.category === cat.id).reduce((s, t) => s + Number(t.amount || 0), 0) })).map(c => ({ ...c, percent: Number(((c.total / totalExp) * 100).toFixed(0)) })).filter(c => c.total > 0).sort((a, b) => b.total - a.total);
                 });
                 const donutGradient = computed(() => {
                     if (categoryAnalysis.value.length === 0) return '#f5f5f4';
@@ -436,35 +465,41 @@
                 const calendarData = computed(() => {
                     const y = currentDate.value.getFullYear(), m = currentDate.value.getMonth(), dc = new Date(y, m + 1, 0).getDate(), sd = new Date(y, m, 1).getDay(), today = new Date().toLocaleDateString('en-CA'), res = [];
                     for (let i = 1; i <= dc; i++) {
-                        const ds = `${y}-${String(m + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`, ts = transactions.value.filter(t => t.date === ds);
-                        res.push({ day: i, dateString: ds, isToday: ds === today, income: ts.filter(t => t.type === 'income').reduce((s, t) => s + Number(t.amount), 0), expense: ts.filter(t => t.type === 'expense').reduce((s, t) => s + Number(t.amount), 0) });
+                        const ds = `${y}-${String(m + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`, ts = transactions.value.filter(t => t && t.date === ds);
+                        res.push({ day: i, dateString: ds, isToday: ds === today, income: ts.filter(t => t.type === 'income').reduce((s, t) => s + Number(t.amount || 0), 0), expense: ts.filter(t => t.type === 'expense').reduce((s, t) => s + Number(t.amount || 0), 0) });
                     }
                     return { emptySlots: sd, days: res };
                 });
                 const netWorthStats = computed(() => {
-                    const a = assets.value.filter(x => x.type === 'asset' || x.type === 'investment').reduce((s, x) => s + Number(x.amount || 0), 0), l = assets.value.filter(x => x.type === 'liability').reduce((s, x) => s + Number(x.amount || 0), 0);
+                    const a = assets.value.filter(x => x && (x.type === 'asset' || x.type === 'investment')).reduce((s, x) => s + Number(x.amount || 0), 0), l = assets.value.filter(x => x && x.type === 'liability').reduce((s, x) => s + Number(x.amount || 0), 0);
                     return { assets: a, liabilities: l, total: a - l };
                 });
-                const sortedAssets = computed(() => [...assets.value].sort((a, b) => (b.amount || 0) - (a.amount || 0)));
+                const sortedAssets = computed(() => [...assets.value].filter(Boolean).sort((a,b)=>(b.amount||0)-(a.amount||0)));
                 const groupedFilteredTransactions = computed(() => {
-                    const l = transactions.value.filter(t => { const d = new Date(t.date); return d.getMonth() === currentDate.value.getMonth() && d.getFullYear() === currentDate.value.getFullYear(); });
+                    const monthStr = `${currentDate.value.getFullYear()}-${String(currentDate.value.getMonth() + 1).padStart(2, '0')}`;
+                    const list = transactions.value.filter(t => t && t.date && t.date.startsWith(monthStr));
                     const g = {};
-                    [...l].sort((a,b)=>b.date.localeCompare(a.date)||b.time.localeCompare(a.time)).forEach(t => { if (!g[t.date]) g[t.date] = { date: t.date, transactions: [], dailyIncome: 0, dailyExpense: 0 }; g[t.date].transactions.push(t); if (t.type === 'income') g[t.date].dailyIncome += Number(t.amount); else g[t.date].dailyExpense += Number(t.amount); });
+                    [...list].sort((a,b) => (b.date || '').localeCompare(a.date || '') || (b.time || '').localeCompare(a.time || '')).forEach(t => { 
+                        if (!g[t.date]) g[t.date] = { date: t.date, transactions: [], dailyIncome: 0, dailyExpense: 0 }; 
+                        g[t.date].transactions.push(t); 
+                        if (t.type === 'income') g[t.date].dailyIncome += Number(t.amount || 0); 
+                        else g[t.date].dailyExpense += Number(t.amount || 0); 
+                    });
                     return Object.values(g).sort((a, b) => b.date.localeCompare(a.date));
                 });
                 const categoryTransactions = computed(() => {
                     if (!selectedCategoryForList.value) return [];
-                    return transactions.value.filter(t => {
-                        const d = new Date(t.date);
-                        return d.getMonth() === currentDate.value.getMonth() && d.getFullYear() === currentDate.value.getFullYear() && t.category === selectedCategoryForList.value.id;
-                    }).sort((a,b)=>b.date.localeCompare(a.date)||b.time.localeCompare(a.time));
+                    const monthStr = `${currentDate.value.getFullYear()}-${String(currentDate.value.getMonth() + 1).padStart(2, '0')}`;
+                    return transactions.value.filter(t => t && t.date && t.date.startsWith(monthStr) && t.category === selectedCategoryForList.value.id).sort((a,b) => b.date.localeCompare(a.date) || b.time.localeCompare(a.time));
                 });
 
+                // 6. 方法核心
                 async function adjustAssetAmount(aid, delta) { if (!aid || typeof aid !== 'string') return; try { const assetRef = doc(getAssetsRef(), aid); await runTransaction(db, async (tx) => { const d = await tx.get(assetRef); if (d.exists()) tx.update(assetRef, { amount: (d.data().amount || 0) + delta }); }); } catch (e) {}};
-
+                
                 async function handleSubmit() {
                     if (formData.value.amount === '') return;
-                    const d = { ...formData.value, amount: Number(formData.value.amount) };
+                    const newId = 'tx_' + Date.now() + Math.random().toString(36).substr(2, 5);
+                    const d = { ...formData.value, amount: Number(formData.value.amount), id: editingId.value || newId };
                     try {
                         if (editingId.value) {
                             const ref = doc(getTransactionsRef(), editingId.value), old = await getDoc(ref);
@@ -472,33 +507,29 @@
                                 const od = old.data();
                                 if (od.linkedAssetId) await adjustAssetAmount(od.linkedAssetId, od.type === 'expense' ? od.amount : -od.amount);
                                 if (d.linkedAssetId) await adjustAssetAmount(d.linkedAssetId, d.type === 'expense' ? -d.amount : d.amount);
-                                await updateDoc(ref, d);
+                                await setDoc(ref, d, { merge: true });
                             }
                         } else {
                             if (d.linkedAssetId) await adjustAssetAmount(d.linkedAssetId, d.type === 'expense' ? -d.amount : d.amount);
-                            await addDoc(getTransactionsRef(), { ...d, id: Date.now().toString() });
+                            await setDoc(doc(getTransactionsRef(), newId), d);
                         }
-                        showSuccess('已寫入手札'); closeForm();
-                    } catch (e) {}
+                        closeForm();
+                    } catch (e) { console.error(e); }
                 }
 
                 async function handleAssetSubmit() {
                     if (!assetForm.value.name) return;
-                    const d = { name: assetForm.value.name, amount: Number(assetForm.value.amount || 0), initialAmount: Number(assetForm.value.initialAmount || 0), type: assetForm.value.type };
-                    try {
-                        if (editingAssetId.value) { await updateDoc(doc(getAssetsRef(), editingAssetId.value), d); }
-                        else { await addDoc(getAssetsRef(), d); }
-                        isAssetEditModalOpen.value = false; editingAssetId.value = null; showSuccess('資產同步成功');
-                    } catch (e) {}
+                    const nid = editingAssetId.value || ('asset_' + Date.now());
+                    const d = { ...assetForm.value, id: nid, amount: Number(assetForm.value.amount || 0), initialAmount: Number(assetForm.value.initialAmount || 0) };
+                    await setDoc(doc(getAssetsRef(), nid), d, { merge: true });
+                    isAssetEditModalOpen.value = false;
                 }
 
                 async function saveCategory() {
                     if (!catForm.value.name) return;
-                    try {
-                        if (editingCategoryId.value) { await updateDoc(doc(getCategoriesRef(), editingCategoryId.value), catForm.value); }
-                        else { const nid = 'cat_' + Date.now(); await setDoc(doc(getCategoriesRef(), nid), { ...catForm.value, id: nid }); }
-                        isCategoryEditModalOpen.value = false; editingCategoryId.value = null; showSuccess('分類已保存');
-                    } catch (e) {}
+                    const nid = editingCategoryId.value || ('cat_' + Date.now());
+                    await setDoc(doc(getCategoriesRef(), nid), { ...catForm.value, id: nid }, { merge: true });
+                    isCategoryEditModalOpen.value = false;
                 }
 
                 async function confirmDelete() {
@@ -510,44 +541,40 @@
                             if (d.exists() && d.data().linkedAssetId) await adjustAssetAmount(d.data().linkedAssetId, d.data().type === 'expense' ? d.data().amount : -d.data().amount);
                         }
                         await deleteDoc(doc(col, itemToDeleteId.value));
-                        showSuccess('數據已抹除');
-                    } catch (e) {} finally { isDeleteModalOpen.value = false; itemToDeleteId.value = null; }
+                    } catch (e) { console.error(e); } finally { isDeleteModalOpen.value = false; itemToDeleteId.value = null; }
                 }
 
-                const startEdit = (t) => { const d = t.id ? t : t.value; editingId.value = d.id; formData.value = { type: d.type, amount: d.amount.toString(), category: d.category, note: d.note || '', date: d.date, time: d.time, linkedAssetId: d.linkedAssetId || '' }; activeTab.value = 'add'; isTransactionDetailModalOpen.value = false; };
-                const startEditAsset = (a) => { const d = a.id ? a : a.value; editingAssetId.value = d.id; assetForm.value = { ...d, amount: d.amount.toString(), initialAmount: d.initialAmount.toString() }; isAssetEditModalOpen.value = true; isAssetDetailModalOpen.value = false; };
-                const editCategory = (c, type) => { const d = c.id ? c : c.value; editingCategoryId.value = d.id; catForm.value = { ...d, type: type || d.type }; isCategoryEditModalOpen.value = true; isCategoryDetailModalOpen.value = false; };
-
-                const changeMonth = (o) => { currentDate.value = new Date(currentDate.value.getFullYear(), currentDate.value.getMonth() + o, 1); };
-                const closeForm = () => { activeTab.value = 'dashboard'; editingId.value = null; formData.value = { type: 'expense', amount: '', category: categories.value.expense[0]?.id || '', note: '', linkedAssetId: '', ...getNowStrings() }; };
-                const cancelDelete = () => { isDeleteModalOpen.value = false; itemToDeleteId.value = null; };
-                const selectDate = (ds) => { selectedDateStr.value = ds; selectedDayTransactions.value = transactions.value.filter(t => t.date === ds).sort((a,b)=>b.time.localeCompare(a.time)); isDayDetailModalOpen.value = true; };
-                const requestDelete = (id) => { deleteType.value = 'transaction'; itemToDeleteId.value = id; isDeleteModalOpen.value = true; };
-                const requestAssetDelete = (id) => { deleteType.value = 'asset'; itemToDeleteId.value = id; isDeleteModalOpen.value = true; };
-                const requestCategoryDelete = (id) => { deleteType.value = 'category'; itemToDeleteId.value = id; isDeleteModalOpen.value = true; };
-                const openTransactionDetail = (t) => { selectedTransaction.value = t; isTransactionDetailModalOpen.value = true; };
-                const openAssetDetail = (a) => { selectedAsset.value = a; isAssetDetailModalOpen.value = true; };
-                const openCategoryDetail = (c, type) => { selectedCategory.value = { ...c, type }; isCategoryDetailModalOpen.value = true; };
-                const openAssetEditModal = () => { editingAssetId.value = null; assetForm.value = { name: '', amount: '', initialAmount: '', type: 'asset' }; isAssetEditModalOpen.value = true; };
-                const openCategoryEditModal = () => { editingCategoryId.value = null; resetCatForm(); isCategoryEditModalOpen.value = true; };
-                const openCategoryTransactions = (cat) => { selectedCategoryForList.value = cat; isCategoryTransactionsModalOpen.value = true; };
-                async function updateSettings() { isSaving.value = true; try { await setDoc(getSettingsDocRef(), { appTitle: tempAppTitle.value }, { merge: true }); showSuccess('名稱已更新'); } catch (e) {} finally { isSaving.value = false; } }
-
-                const startSync = () => {
-                    onSnapshot(getTransactionsRef(), (s) => transactions.value = s.docs.map(d => ({ ...d.data(), id: d.id })));
-                    onSnapshot(getAssetsRef(), (s) => assets.value = s.docs.map(d => ({ ...d.data(), id: d.id })));
-                    onSnapshot(getCategoriesRef(), (s) => { if (!s.empty) { const c = { expense: [], income: [] }; s.docs.forEach(d => { const dt = d.data(); if (dt.type && c[dt.type]) c[dt.type].push({ ...dt, id: d.id }); }); categories.value = c; } });
-                    onSnapshot(getSettingsDocRef(), (s) => { if (s.exists()) { appTitle.value = s.data().appTitle || '陳家記帳日誌'; tempAppTitle.value = appTitle.value; } });
-                };
-
                 onMounted(async () => {
-                    try { await signInAnonymously(auth); onAuthStateChanged(auth, (u) => { if (u) startSync(); isAuthReady.value = true; }); } catch (e) { isAuthReady.value = true; }
+                    try { await signInAnonymously(auth); onAuthStateChanged(auth, async (u) => { if (u) { await autoMigrate(); startSync(); } isAuthReady.value = true; }); } catch (e) { isAuthReady.value = true; }
                     refreshIcons();
                 });
 
                 watch([activeTab, isDeleteModalOpen, isDayDetailModalOpen, isTransactionDetailModalOpen, isAssetDetailModalOpen, isCategoryDetailModalOpen, isAssetEditModalOpen, isCategoryEditModalOpen, isCategoryTransactionsModalOpen, transactions, assets], refreshIcons);
 
-                return { isAuthReady, activeTab, currentDate, transactions, assets, categories, appTitle, tempAppTitle, formData, assetForm, catForm, isTransactionDetailModalOpen, isAssetDetailModalOpen, isCategoryDetailModalOpen, isDayDetailModalOpen, isDeleteModalOpen, isAssetEditModalOpen, isCategoryEditModalOpen, isCategoryTransactionsModalOpen, selectedTransaction, selectedAsset, selectedCategory, selectedDateStr, selectedDayTransactions, selectedCategoryForList, yearlyStats, monthlyStats, netWorthStats, categoryAnalysis, calendarData, sortedAssets, groupedFilteredTransactions, categoryTransactions, donutGradient, changeMonth, startEdit, startEditAsset, editCategory, closeForm, openTransactionDetail, openAssetDetail, openCategoryDetail, openAssetEditModal, openCategoryEditModal, openCategoryTransactions, selectDate, requestDelete, requestAssetDelete, requestCategoryDelete, confirmDelete, cancelDelete, handleAssetSubmit, saveCategory, updateSettings, getCategoryIcon: (t, i) => categories.value[t]?.find(c => c.id === i)?.icon || '❓', getCategoryName: (t, i) => categories.value[t]?.find(c => c.id === i)?.name || '未知', getChartColor: (i) => CHART_COLORS[i % CHART_COLORS.length] };
+                // 7. 返回 Vue 模板使用的物件
+                return { 
+                    isAuthReady, activeTab, currentDate, transactions, assets, categories, appTitle, tempAppTitle, formData, assetForm, catForm, 
+                    isTransactionDetailModalOpen, isAssetDetailModalOpen, isCategoryDetailModalOpen, isDayDetailModalOpen, isDeleteModalOpen, isAssetEditModalOpen, isCategoryEditModalOpen, isCategoryTransactionsModalOpen,
+                    selectedTransaction, selectedAsset, selectedCategory, selectedDateStr, selectedDayTransactions, selectedCategoryForList,
+                    yearlyStats, monthlyStats, netWorthStats, categoryAnalysis, calendarData, sortedAssets, groupedFilteredTransactions, categoryTransactions, donutGradient, 
+                    changeMonth: (o) => { currentDate.value = new Date(currentDate.value.getFullYear(), currentDate.value.getMonth() + o, 1); }, 
+                    closeForm, handleSubmit, confirmDelete, cancelDelete: () => { isDeleteModalOpen.value = false; },
+                    startEdit: (t) => { const d = t.id ? t : t.value; editingId.value = d.id; formData.value = { ...d, amount: d.amount.toString() }; activeTab.value = 'add'; },
+                    startEditAsset: (a) => { assetForm.value = { ...a }; editingAssetId.value = a.id; isAssetEditModalOpen.value = true; },
+                    editCategory: (c, t) => { catForm.value = { ...c, type: t }; editingCategoryId.value = c.id; isCategoryEditModalOpen.value = true; },
+                    openTransactionDetail: (t) => { selectedTransaction.value = t; isTransactionDetailModalOpen.value = true; },
+                    openAssetDetail: (a) => { selectedAsset.value = a; isAssetDetailModalOpen.value = true; },
+                    openCategoryDetail: (c, type) => { selectedCategory.value = { ...c, type }; isCategoryDetailModalOpen.value = true; },
+                    openAssetEditModal: () => { editingAssetId.value = null; assetForm.value = { name: '', amount: '', initialAmount: '', type: 'asset' }; isAssetEditModalOpen.value = true; },
+                    openCategoryEditModal: () => { editingCategoryId.value = null; catForm.value = { id: '', name: '', icon: '📁', type: 'expense' }; isCategoryEditModalOpen.value = true; },
+                    openCategoryTransactions: (cat) => { selectedCategoryForList.value = cat; isCategoryTransactionsModalOpen.value = true; },
+                    selectDate: (ds) => { selectedDateStr.value = ds; selectedDayTransactions.value = transactions.value.filter(t => t && t.date === ds); isDayDetailModalOpen.value = true; },
+                    requestDelete: (id) => { deleteType.value = 'transaction'; itemToDeleteId.value = id; isDeleteModalOpen.value = true; }, 
+                    requestAssetDelete: (id) => { deleteType.value = 'asset'; itemToDeleteId.value = id; isDeleteModalOpen.value = true; },
+                    requestCategoryDelete: (id) => { deleteType.value = 'category'; itemToDeleteId.value = id; isDeleteModalOpen.value = true; },
+                    handleAssetSubmit, saveCategory, updateSettings: async () => { isSaving.value = true; await setDoc(getSettingsDocRef(), { appTitle: tempAppTitle.value }, { merge: true }); isSaving.value = false; },
+                    getCategoryIcon: (t, i) => categories.value[t]?.find(c => c.id === i)?.icon || '❓', getCategoryName: (t, i) => categories.value[t]?.find(c => c.id === i)?.name || '未知', getChartColor: (i) => CHART_COLORS[i % CHART_COLORS.length]
+                };
             }
         }).mount('#app');
     </script>
